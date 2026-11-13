@@ -475,6 +475,12 @@ fi
 docker build ${node_platform_args} -f "${NODE_DIR}/${NODE_DOCKERFILE}" -t taniwha-backend-node "${NODE_DIR}"
 remove_container_if_present mediata-node 45
 
+# Seed the bundled samples before a fresh node takes its first disclosure inventory.
+if [[ ! -d "${NODE_DATA_DIR}/discovery-privacy" ]]; then
+  mkdir -p "${NODE_DATA_DIR}/datasets"
+  sh "${ROOT_DIR}/evaluation/scripts/load_sample_datasets.sh"
+fi
+
 NODE_IP="http://${NODE_PUBLIC_HOST}:${NODE_HOST_PORT}"
 
 docker run -d \
@@ -499,7 +505,6 @@ docker run -d \
 wait_for_node "${NODE_HEALTH_TIMEOUT_S}"
 wait_for_local_fdp "${LOCAL_FDP_TIMEOUT_S}"
 
-sh "${ROOT_DIR}/evaluation/scripts/load_sample_datasets.sh"
 sync_sample_fair_metadata
 
 echo "Node (host): http://${NODE_PUBLIC_HOST}:${NODE_HOST_PORT}/taniwha"
