@@ -6,28 +6,14 @@ ORCH_DIR="${ROOT_DIR}/MEDIATA_orchestrator"
 NODE_DIR="${ROOT_DIR}/MEDIATA_node"
 FE_DIR="${ROOT_DIR}/MEDIATA_frontend"
 
-sed_in_place() {
-  if [[ "$(uname)" == "Darwin" ]]; then
-    sed -i '' "$@"
-  else
-    sed -i "$@"
-  fi
-}
-
-fix_crlf() {
-  local f="$1"
-  [[ -f "$f" ]] || return 0
-  sed_in_place 's/\r$//' "$f" || true
-}
-
 compose_down_if_present() {
   local dir="$1"
   [[ -d "$dir" ]] || return 0
 
   if [[ -f "${dir}/docker-compose.yml" ]]; then
-    ( cd "$dir" && docker compose down -v --remove-orphans || true )
+    ( cd "$dir" && docker compose down --remove-orphans )
   elif [[ -f "${dir}/compose.yml" ]]; then
-    ( cd "$dir" && docker compose -f compose.yml down -v --remove-orphans || true )
+    ( cd "$dir" && docker compose -f compose.yml down --remove-orphans )
   fi
 }
 
@@ -35,12 +21,14 @@ remove_container_if_present() {
   local name="$1"
   local timeout_s="${2:-30}"
 
-  if ! docker ps -a --format '{{.Names}}' | grep -Fxq "$name"; then
+  local containers
+  containers="$(docker ps -a --format '{{.Names}}')" || return 1
+  if ! grep -Fxq "$name" <<< "$containers"; then
     return 0
   fi
 
-  docker stop -t "${timeout_s}" "$name" >/dev/null 2>&1 || true
-  docker rm -f "$name" >/dev/null 2>&1 || true
+  docker stop -t "$timeout_s" "$name" >/dev/null
+  docker rm "$name" >/dev/null
 }
 
 echo "================================================"
@@ -51,7 +39,7 @@ echo ""
 # ---- Frontend ----
 echo "[1/3] Stopping frontend..."
 compose_down_if_present "$FE_DIR"
-docker rm -f mediata-frontend >/dev/null 2>&1 || true
+remove_container_if_present mediata-frontend
 echo "✓ Frontend stopped"
 
 # ---- Node ----
