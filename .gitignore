@@ -1,2 +1,4 @@
 evaluation/*.pdf
 node-data/
+.settings/
+.project
